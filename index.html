@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2-Month Calendar</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="calendar-app">
+        <header class="app-header">
+            <button id="btn-prev" class="nav-btn">&larr; 前の月</button>
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <h1 id="header-title">Calendar</h1>
+                <button id="btn-today" class="nav-btn today-btn">今日</button>
+                <button id="btn-manage-templates" class="nav-btn">登録リスト編集</button>
+            </div>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+                <button id="btn-next" class="nav-btn">次の月 &rarr;</button>
+                <div class="theme-switch-wrapper" title="ダークモード切替">
+                    <label class="theme-switch" for="theme-toggle">
+                        <input type="checkbox" id="theme-toggle">
+                        <div class="slider round"></div>
+                    </label>
+                </div>
+            </div>
+        </header>
+        
+        <main class="calendars-container">
+            <div class="calendar-wrapper">
+                <h2 id="left-month-title" class="month-title">Month 1</h2>
+                <div class="calendar" id="calendar-left"></div>
+            </div>
+            <div class="calendar-wrapper">
+                <h2 id="right-month-title" class="month-title">Month 2</h2>
+                <div class="calendar" id="calendar-right"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="event-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-date-title">Date</h3>
+                <button id="btn-close-modal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul id="event-list" class="event-list"></ul>
+                <div class="input-group-vertical">
+
+                    <div class="input-row">
+                        <input type="color" id="new-event-color" value="#667eea" class="color-picker" title="背景色を選択">
+                        <input type="color" id="new-event-text-color" value="#ffffff" class="color-picker" title="文字色を選択">
+                        <input type="text" id="new-event-input" placeholder="新しい予定を入力..." autocomplete="off">
+                    </div>
+                    <button id="btn-add-event" class="primary-btn">追加</button>
+                    
+                    <div class="quick-add-templates">
+                        <h4 class="quick-add-title">登録リストから追加</h4>
+                        <div id="quick-template-container" class="template-chips"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Management Modal -->
+    <div id="template-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>登録リスト管理</h3>
+                <button id="btn-close-template-modal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul id="template-list" class="event-list"></ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Custom Context Menu -->
+    <div id="custom-context-menu" class="hidden">
+        <ul>
+            <li id="menu-edit">編集</li>
+            <li id="menu-add-template">登録リストへ追加</li>
+        </ul>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

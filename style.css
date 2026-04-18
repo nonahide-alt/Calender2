@@ -1,0 +1,615 @@
+:root {
+    --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    --card-bg: rgba(255, 255, 255, 0.65);
+    --card-border: rgba(255, 255, 255, 0.4);
+    --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --text-primary: #2d3748;
+    --text-secondary: #718096;
+    --primary-color: #667eea;
+    --primary-hover: #5a67d8;
+    --border-radius-lg: 24px;
+    --border-radius-sm: 12px;
+    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    /* 日付セルの固定サイズ（ここで手動で大きさを変更できます） */
+    --cell-fixed-width: 100px;
+    --cell-fixed-height: 120px; /* 5行入るように少しだけ高くした独自サイズ */
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: hidden;
+}
+
+.calendar-app {
+    width: 95%;
+    max-width: 1800px;
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--card-border);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--card-shadow);
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+}
+
+#header-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.nav-btn {
+    background: white;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.nav-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.calendars-container {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.calendar-wrapper {
+    flex: 1;
+    min-width: 320px;
+    background: rgba(255, 255, 255, 0.4);
+    border-radius: var(--border-radius-sm);
+    padding: 1.5rem;
+}
+
+.month-title {
+    text-align: center;
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+}
+
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, var(--cell-fixed-width));
+    justify-content: center;
+    gap: 8px;
+}
+
+.today-btn {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.95rem;
+}
+
+.day-header {
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding-bottom: 0.5rem;
+}
+
+.day-header.sun { color: #e53e3e; }
+.day-header.sat { color: #3182ce; }
+
+.date-cell {
+    height: var(--cell-fixed-height);
+    background: white;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    padding: 4px; /* パディングを小さくして広さを確保 */
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    border: 1px solid transparent;
+    overflow: hidden;
+}
+
+.date-cell:hover:not(.empty) {
+    transform: scale(1.05);
+    z-index: 10;
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.date-cell.empty {
+    background: transparent;
+    cursor: default;
+}
+
+.date-cell.today {
+    background: #ebf4ff;
+    border: 1px solid var(--primary-color);
+}
+
+.date-cell.sun { color: #e53e3e; }
+.date-cell.sat { color: #3182ce; }
+
+.date-num {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.date-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.rokuyo {
+    font-size: 0.6rem;
+    color: #a0aec0;
+    font-weight: 400;
+}
+
+/* 祭日の場合、日付を赤くする */
+.date-cell.holiday .date-num {
+    color: #e53e3e;
+}
+
+.event-indicator {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 2px;
+    width: 100%;
+}
+
+.event-dot {
+    font-size: 0.65rem;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 3px;
+    padding: 2px 4px;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 固定幅に収まらない文字を省略（...） */
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+.event-dot.checked {
+    opacity: 0.6;
+}
+
+.event-dot.checked::before {
+    content: "✓ ";
+    font-weight: bold;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 1;
+    transition: var(--transition);
+}
+
+.modal.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--border-radius-lg);
+    width: 90%;
+    max-width: 400px;
+    padding: 2rem;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    transform: translateY(0);
+    transition: var(--transition);
+}
+
+.modal.hidden .modal-content {
+    transform: translateY(20px);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-header h3 {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #e53e3e;
+}
+
+.event-list {
+    list-style: none;
+    margin-bottom: 1.5rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.event-item {
+    padding: 0.75rem;
+    background: #f7fafc;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+
+.event-checkbox {
+    margin-right: 0.5rem;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.event-text {
+    flex: 1;
+    margin-right: 0.5rem;
+    word-break: break-all;
+    padding: 0.25rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    outline: none;
+}
+
+.event-text:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.event-text:focus {
+    background: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.event-item.checked .event-text {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.inline-color-picker {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    margin-right: 0.25rem;
+}
+
+.inline-color-picker::-webkit-color-swatch-wrapper {
+    padding: 1px;
+}
+
+.inline-color-picker::-webkit-color-swatch {
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+}
+
+.delete-event-btn {
+    background: none;
+    border: none;
+    color: #e53e3e;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-left: 0.25rem;
+}
+
+.input-group-vertical {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.color-picker {
+    width: 36px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+.color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+#new-event-input {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    background: white;
+}
+
+#new-event-input:focus {
+    border-color: var(--primary-color);
+}
+
+.edit-event-btn {
+    background: none;
+    border: none;
+    color: #3182ce;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-left: 0.25rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+}
+.edit-event-btn:hover {
+    background: rgba(49, 130, 206, 0.1);
+}
+
+.primary-btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.primary-btn:hover {
+    background: var(--primary-hover);
+}
+
+/* Quick Add Templates */
+.quick-add-templates {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.quick-add-title {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+}
+
+.template-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.template-chip {
+    padding: 0.4rem 0.8rem;
+    border-radius: 9999px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border: none;
+    transition: transform 0.1s, box-shadow 0.1s;
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.template-chip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+/* Custom Context Menu */
+#custom-context-menu {
+    position: fixed;
+    z-index: 2000;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    padding: 0.5rem 0;
+    min-width: 150px;
+    transition: opacity 0.2s;
+}
+
+#custom-context-menu.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#custom-context-menu ul {
+    list-style: none;
+}
+
+#custom-context-menu li {
+    padding: 0.5rem 1.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    transition: background 0.2s;
+}
+
+#custom-context-menu li:hover {
+    background: #f7fafc;
+    color: var(--primary-color);
+}
+/* Theme Switch */
+.theme-switch-wrapper {
+    display: flex;
+    align-items: center;
+}
+.theme-switch {
+    display: inline-block;
+    height: 24px;   
+    position: relative;
+    width: 44px;
+    margin: 0;
+}
+.theme-switch input {
+    display:none;
+}
+.theme-switch .slider {
+    background-color: #cbd5e0;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .3s;
+}
+.theme-switch .slider:before {
+    background-color: white;
+    bottom: 3px;
+    content: "";
+    height: 18px;
+    left: 3px;
+    position: absolute;
+    transition: .3s;
+    width: 18px;
+}
+.theme-switch input:checked + .slider {
+    background-color: var(--primary-color);
+}
+.theme-switch input:checked + .slider:before {
+    transform: translateX(20px);
+}
+.theme-switch .slider.round {
+    border-radius: 24px;
+}
+.theme-switch .slider.round:before {
+    border-radius: 50%;
+}
+
+/* Dark Mode Overrides */
+body.dark-mode {
+    --bg-gradient: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+    --card-bg: rgba(26, 32, 44, 0.85);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    --text-primary: #f7fafc;
+    --text-secondary: #a0aec0;
+}
+
+body.dark-mode .calendar-wrapper {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .date-cell {
+    background: #2d3748;
+    border-color: rgba(255,255,255,0.05); /* Slight border to separate cells */
+}
+
+body.dark-mode .date-cell.empty {
+    background: transparent;
+    border-color: transparent;
+}
+
+body.dark-mode .nav-btn {
+    background: transparent;
+    color: var(--primary-color);
+}
+
+body.dark-mode .nav-btn:hover {
+    background: rgba(102, 126, 234, 0.2);
+}
+
+body.dark-mode .modal-content {
+    background: #1a202c;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+body.dark-mode #new-event-input,
+body.dark-mode #custom-context-menu {
+    background: #2d3748;
+    color: #f7fafc;
+    border-color: #4a5568;
+}
+
+body.dark-mode #custom-context-menu li:hover {
+    background: #4a5568;
+}
+
+body.dark-mode .close-btn {
+    color: #a0aec0;
+}
+body.dark-mode .close-btn:hover {
+    color: #f32013;
+}
+
+@media (max-width: 768px) {
+    .calendar-app {
+        padding: 1rem;
+    }
+    #header-title {
+        font-size: 1.8rem;
+    }
+    .calendars-container {
+        flex-direction: column;
+    }
+}
