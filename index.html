@@ -84,9 +84,34 @@
         <ul>
             <li id="menu-edit">編集</li>
             <li id="menu-add-template">登録リストへ追加</li>
+            <li id="menu-set-period">期間指定</li>
         </ul>
     </div>
 
+    <!-- Period Specify Modal -->
+    <div id="period-modal" class="modal hidden">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>期間指定パラメータ設定</h3>
+                <button id="btn-close-period-modal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group-vertical">
+                    <div style="display: flex; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">開始日</label>
+                            <input type="date" id="period-start-date" class="template-select">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">終了日</label>
+                            <input type="date" id="period-end-date" class="template-select">
+                        </div>
+                    </div>
+                    <button id="btn-apply-period" class="primary-btn" style="margin-top: 1rem;">適用</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <script src="app.js"></script>
 </body>
 </html>

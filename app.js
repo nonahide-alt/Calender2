@@ -17,10 +17,16 @@ for (const dateId in eventsData) {
 let templatesData = JSON.parse(localStorage.getItem('calendarTemplates')) || [];
 let calendarMetas = {};
 let activeContextMenuCallbacks = null;
+let activeContextEvent = null;
+let multiDayEventsData = JSON.parse(localStorage.getItem('calendarMultiEvents')) || [];
 
 let isDarkMode = JSON.parse(localStorage.getItem('calendarDarkMode')) || false;
 if (isDarkMode) {
     document.body.classList.add('dark-mode');
+}
+
+function generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
 
 function saveEvents() {
@@ -29,6 +35,10 @@ function saveEvents() {
 
 function saveTemplates() {
     localStorage.setItem('calendarTemplates', JSON.stringify(templatesData));
+}
+
+function saveMultiEvents() {
+    localStorage.setItem('calendarMultiEvents', JSON.stringify(multiDayEventsData));
 }
 
 function renderQuickTemplates() {
@@ -85,27 +95,105 @@ async function init() {
     await loadCSV();
     renderQuickTemplates();
 
-    document.addEventListener('click', () => {
+    document.addEventListener('click', (e) => {
         const menu = document.getElementById('custom-context-menu');
         if (menu && !menu.classList.contains('hidden')) {
-            menu.classList.add('hidden');
-            activeContextMenuCallbacks = null;
+            // コンテキストメニューの内部がクリックされた場合は閉じない
+            if (!menu.contains(e.target)) {
+                menu.classList.add('hidden');
+                activeContextMenuCallbacks = null;
+            }
         }
     });
 
     document.getElementById('menu-edit').addEventListener('click', (e) => {
+        e.stopPropagation();
         if (activeContextMenuCallbacks && activeContextMenuCallbacks.edit) {
             activeContextMenuCallbacks.edit();
         }
+        document.getElementById('custom-context-menu').classList.add('hidden');
+        activeContextMenuCallbacks = null;
     });
 
     document.getElementById('menu-add-template').addEventListener('click', (e) => {
+        e.stopPropagation();
         if (activeContextMenuCallbacks && activeContextMenuCallbacks.add) {
             activeContextMenuCallbacks.add();
         }
+        document.getElementById('custom-context-menu').classList.add('hidden');
+        activeContextMenuCallbacks = null;
     });
 
     document.getElementById('btn-manage-templates').addEventListener('click', openTemplateModal);
+    
+    document.getElementById('menu-set-period').addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (activeContextMenuCallbacks && activeContextMenuCallbacks.setPeriod) {
+            activeContextMenuCallbacks.setPeriod();
+        }
+        document.getElementById('custom-context-menu').classList.add('hidden');
+        activeContextMenuCallbacks = null;
+    });
+
+    document.getElementById('btn-close-period-modal').addEventListener('click', () => {
+        document.getElementById('period-modal').classList.add('hidden');
+    });
+
+    document.getElementById('btn-apply-period').addEventListener('click', () => {
+        const startStr = document.getElementById('period-start-date').value;
+        const endStr = document.getElementById('period-end-date').value;
+        if (!startStr || !endStr) {
+            alert('開始日と終了日を入力してください。');
+            return;
+        }
+        if (new Date(startStr) > new Date(endStr)) {
+            alert('開始日は終了日以前である必要があります。');
+            return;
+        }
+
+        if (activeContextEvent) {
+            const evt = activeContextEvent.event;
+
+            if (activeContextEvent.isExistingMulti) {
+                // Editing an existing multi-day event's period
+                const realEvt = multiDayEventsData.find(e => e.id === evt.id);
+                if (realEvt) {
+                    realEvt.startDate = startStr;
+                    realEvt.endDate = endStr;
+                }
+                saveMultiEvents();
+            } else {
+                // Converting a single-day event to multi-day
+                const originIndex = activeContextEvent.index;
+                const originDateId = activeContextEvent.dateId;
+
+                if (eventsData[originDateId]) {
+                    eventsData[originDateId].splice(originIndex, 1);
+                    if (eventsData[originDateId].length === 0) delete eventsData[originDateId];
+                }
+
+                const multiEvt = {
+                    id: generateId(),
+                    text: evt.text,
+                    color: evt.color || '#667eea',
+                    textColor: evt.textColor || '#ffffff',
+                    checked: evt.checked || false,
+                    startDate: startStr,
+                    endDate: endStr
+                };
+                multiDayEventsData.push(multiEvt);
+                saveEvents();
+                saveMultiEvents();
+            }
+            
+            renderCalendars();
+            renderEventList();
+        }
+        
+        document.getElementById('period-modal').classList.add('hidden');
+        document.getElementById('custom-context-menu').classList.add('hidden');
+        activeContextMenuCallbacks = null;
+    });
     
     document.getElementById('btn-close-template-modal').addEventListener('click', closeTemplateModal);
     document.getElementById('template-modal').addEventListener('click', (e) => {
@@ -172,11 +260,85 @@ function renderCalendars() {
     renderSingleCalendar('calendar-right', 'right-month-title', rightDate.getFullYear(), rightDate.getMonth());
 }
 
+function allocateSlots(year, month) {
+    const slots = {};
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const formatDateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    for (let i = 1; i <= daysInMonth; i++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        slots[dateStr] = [];
+    }
+    
+    const visibleMultiEvents = multiDayEventsData.filter(e => {
+        return (new Date(e.startDate) <= new Date(year, month, daysInMonth)) && 
+               (new Date(e.endDate) >= new Date(year, month, 1));
+    });
+    
+    visibleMultiEvents.sort((a, b) => {
+        const lenA = new Date(a.endDate) - new Date(a.startDate);
+        const lenB = new Date(b.endDate) - new Date(b.startDate);
+        if (lenA !== lenB) return lenB - lenA; 
+        return new Date(a.startDate) - new Date(b.startDate);
+    });
+
+    visibleMultiEvents.forEach(evt => {
+        let slotIndex = 0;
+        let slotFound = false;
+        while (!slotFound) {
+            let conflict = false;
+            let d = new Date(evt.startDate);
+            const endD = new Date(evt.endDate);
+            endD.setHours(0,0,0,0);
+            while (d <= endD) {
+                const dateStr = formatDateStr(d);
+                if (slots[dateStr] && slots[dateStr][slotIndex] !== undefined && slots[dateStr][slotIndex] !== null) {
+                    conflict = true;
+                    break;
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            if (!conflict) slotFound = true;
+            else slotIndex++;
+        }
+        let d = new Date(evt.startDate);
+        const endD = new Date(evt.endDate);
+        endD.setHours(0,0,0,0);
+        while (d <= endD) {
+            const dateStr = formatDateStr(d);
+            if (slots[dateStr]) {
+                slots[dateStr][slotIndex] = Object.assign({}, evt, { isMulti: true });
+            }
+            d.setDate(d.getDate() + 1);
+        }
+    });
+
+    for (let i = 1; i <= daysInMonth; i++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const singleEvts = eventsData[dateStr] || [];
+        singleEvts.forEach((evt, idx) => {
+             let slotIndex = 0;
+             while (slots[dateStr][slotIndex] !== undefined && slots[dateStr][slotIndex] !== null) {
+                 slotIndex++;
+             }
+             slots[dateStr][slotIndex] = Object.assign({}, evt, { isMulti: false, originalIndex: idx });
+        });
+        
+        const maxLen = slots[dateStr].length;
+        for (let s = 0; s < maxLen; s++) {
+            if (slots[dateStr][s] === undefined) slots[dateStr][s] = null;
+        }
+    }
+    return slots;
+}
+
 function renderSingleCalendar(containerId, titleId, year, month) {
     const container = document.getElementById(containerId);
     const title = document.getElementById(titleId);
     container.innerHTML = '';
     title.textContent = `${year}年 ${month + 1}月`;
+
+    const monthSlots = allocateSlots(year, month);
 
     // Render Headers
     dayNames.forEach((day, index) => {
@@ -213,6 +375,7 @@ function renderSingleCalendar(containerId, titleId, year, month) {
         }
 
         const dateId = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        dateCell.setAttribute('data-date', dateId);
         
         const topRow = document.createElement('div');
         topRow.className = 'date-top-row';
@@ -240,22 +403,34 @@ function renderSingleCalendar(containerId, titleId, year, month) {
         const indicatorContainer = document.createElement('div');
         indicatorContainer.className = 'event-indicator';
         
-        if (eventsData[dateId]) {
-            eventsData[dateId].forEach(evt => {
-                const dot = document.createElement('div');
-                dot.className = 'event-dot';
-                if (evt.checked) dot.classList.add('checked');
-                dot.style.backgroundColor = evt.color || '#667eea';
-                dot.style.color = evt.textColor || '#ffffff';
-                dot.textContent = evt.text || evt;
-                indicatorContainer.appendChild(dot);
-            });
-        }
+        const daySlots = monthSlots[dateId] || [];
+        daySlots.forEach(evt => {
+            if (evt === null || (evt && evt.isMulti)) {
+                // 複数日イベントとnullスロットはプレースホルダー（スペーサー）にする
+                const placeholder = document.createElement('div');
+                placeholder.className = 'event-bar placeholder';
+                indicatorContainer.appendChild(placeholder);
+            } else {
+                const bar = document.createElement('div');
+                bar.className = 'event-bar single';
+                bar.style.backgroundColor = evt.color || '#667eea';
+                bar.style.color = evt.textColor || '#ffffff';
+                bar.textContent = evt.text || evt;
+                if (evt.checked) bar.classList.add('checked');
+                indicatorContainer.appendChild(bar);
+            }
+        });
+
         dateCell.appendChild(indicatorContainer);
 
         dateCell.addEventListener('click', () => openModal(dateId, i, month, year));
         container.appendChild(dateCell);
     }
+
+    // 複数日イベントのオーバーレイバーを描画
+    requestAnimationFrame(() => {
+        renderMultiDayOverlays(container, year, month, monthSlots, daysInMonth);
+    });
 }
 
 function openModal(dateId, day, month, year) {
@@ -272,12 +447,130 @@ function closeModal() {
     document.getElementById('new-event-input').value = '';
 }
 
+function renderMultiDayOverlays(container, year, month, monthSlots, daysInMonth) {
+    // 既存のオーバーレイを削除
+    container.querySelectorAll('.multi-bar-overlay').forEach(el => el.remove());
+    
+    // calendar-wrapperを取得（containerの親）してposition:relativeを設定
+    const wrapper = container.closest('.calendar-wrapper');
+    if (!wrapper) return;
+    wrapper.style.position = 'relative';
+    // 既存のオーバーレイを削除
+    wrapper.querySelectorAll('.multi-bar-overlay').forEach(el => el.remove());
+    
+    // セルのマップを構築
+    const cellMap = {};
+    container.querySelectorAll('.date-cell[data-date]').forEach(cell => {
+        cellMap[cell.dataset.date] = cell;
+    });
+    
+    // 処理済みイベント(同一行のセグメント)を記録
+    const processed = new Set();
+    
+    for (let i = 1; i <= daysInMonth; i++) {
+        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+        const daySlots = monthSlots[dateStr] || [];
+        const d = new Date(year, month, i);
+        
+        daySlots.forEach((evt, slotIdx) => {
+            if (!evt || !evt.isMulti) return;
+            
+            const segKey = evt.id + '_row_' + Math.floor((firstDayOffset(year, month) + i - 1) / 7);
+            if (processed.has(segKey)) return;
+            
+            // この日が行セグメントの開始地点かどうかチェック
+            const actualStart = new Date(evt.startDate);
+            actualStart.setHours(0,0,0,0);
+            const isRowStart = d.getTime() === actualStart.getTime() || d.getDay() === 0 || i === 1;
+            if (!isRowStart) return;
+            
+            // この行セグメントの終了日を見つける
+            const actualEnd = new Date(evt.endDate);
+            actualEnd.setHours(0,0,0,0);
+            let segEnd = i;
+            for (let j = i; j <= daysInMonth; j++) {
+                const jd = new Date(year, month, j);
+                if (jd > actualEnd) break;
+                segEnd = j;
+                if (jd.getDay() === 6) break; // 土曜で行が終わる
+            }
+            
+            const startDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            const endDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(segEnd).padStart(2, '0')}`;
+            
+            const startCell = cellMap[startDateStr];
+            const endCell = cellMap[endDateStr];
+            if (!startCell || !endCell) return;
+            
+            // プレースホルダーの位置からtopを算出
+            const placeholders = startCell.querySelectorAll('.event-bar.placeholder');
+            let topOffset = 0;
+            if (placeholders[slotIdx]) {
+                topOffset = placeholders[slotIdx].offsetTop + startCell.offsetTop;
+            } else {
+                topOffset = startCell.offsetTop + 22 + slotIdx * 20;
+            }
+            
+            const left = startCell.offsetLeft;
+            const right = endCell.offsetLeft + endCell.offsetWidth;
+            
+            const isActualStart = d.getTime() === actualStart.getTime();
+            const isActualEnd = (new Date(year, month, segEnd)).getTime() === actualEnd.getTime();
+            
+            const bar = document.createElement('div');
+            bar.className = 'multi-bar-overlay';
+            bar.style.position = 'absolute';
+            bar.style.left = (left + 4) + 'px';
+            bar.style.width = (right - left - 8) + 'px';
+            bar.style.top = topOffset + 'px';
+            bar.style.height = '18px';
+            bar.style.backgroundColor = evt.color || '#667eea';
+            bar.style.color = evt.textColor || '#ffffff';
+            bar.style.fontSize = '0.65rem';
+            bar.style.lineHeight = '18px';
+            bar.style.padding = '0 4px';
+            bar.style.overflow = 'hidden';
+            bar.style.textOverflow = 'ellipsis';
+            bar.style.whiteSpace = 'nowrap';
+            bar.style.zIndex = '20';
+            bar.style.boxSizing = 'border-box';
+            bar.style.pointerEvents = 'none';
+            
+            // 角丸の設定
+            const rStart = isActualStart ? '3px' : '0';
+            const rEnd = isActualEnd ? '3px' : '0';
+            bar.style.borderRadius = `${rStart} ${rEnd} ${rEnd} ${rStart}`;
+            
+            if (evt.checked) bar.style.opacity = '0.6';
+            bar.textContent = isActualStart ? evt.text : '';
+            
+            wrapper.appendChild(bar);
+            processed.add(segKey);
+        });
+    }
+}
+
+function firstDayOffset(year, month) {
+    return new Date(year, month, 1).getDay();
+}
+
 function renderEventList() {
     const list = document.getElementById('event-list');
     list.innerHTML = '';
-    const events = eventsData[selectedDateId] || [];
     
-    events.forEach((evt, index) => {
+    const singleEvents = (eventsData[selectedDateId] || []).map((e, idx) => Object.assign({}, e, { _isMulti: false, _index: idx }));
+    const multiEvents = multiDayEventsData.filter(e => {
+        const d = new Date(selectedDateId);
+        const sd = new Date(e.startDate);
+        const ed = new Date(e.endDate);
+        sd.setHours(0,0,0,0);
+        ed.setHours(0,0,0,0);
+        return d >= sd && d <= ed;
+    }).map((e, idx) => Object.assign({}, e, { _isMulti: true, _index: idx }));
+    
+    const events = [...singleEvents, ...multiEvents];
+    
+    events.forEach((evt) => {
         const li = document.createElement('li');
         li.className = 'event-item';
         if (evt.checked) li.classList.add('checked');
@@ -286,13 +579,29 @@ function renderEventList() {
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.className = 'event-checkbox';
-        cb.checked = evt.checked;
+        cb.checked = evt.checked || false;
         cb.addEventListener('change', () => {
             evt.checked = cb.checked;
-            saveEvents();
+            if (evt._isMulti) {
+                const realEvt = multiDayEventsData.find(e => e.id === evt.id);
+                if (realEvt) realEvt.checked = evt.checked;
+                saveMultiEvents();
+            } else {
+                eventsData[selectedDateId][evt._index].checked = evt.checked;
+                saveEvents();
+            }
             renderEventList();
             renderCalendars();
         });
+
+        // 複数日予定の場合はアイコンを先頭に追加
+        if (evt._isMulti) {
+            const icon = document.createElement('span');
+            icon.className = 'multi-period-icon';
+            icon.textContent = '📅';
+            icon.title = `${evt.startDate} ～ ${evt.endDate}`;
+            li.appendChild(icon);
+        }
 
         const text = document.createElement('span');
         text.className = 'event-text';
@@ -302,16 +611,20 @@ function renderEventList() {
         text.spellcheck = false;
         
         const saveEdit = () => {
-            const newText = text.textContent.trim();
+            let newText = text.textContent.trim();
+            
             const originalText = evt.text || evt;
             if (newText && newText !== originalText) {
-                if (typeof evt === 'object') {
-                    evt.text = newText;
+                if (evt._isMulti) {
+                    const realEvt = multiDayEventsData.find(e => e.id === evt.id);
+                    if (realEvt) realEvt.text = newText;
+                    saveMultiEvents();
                 } else {
-                    eventsData[selectedDateId][index] = { text: newText, color: '#667eea', textColor: '#ffffff', checked: false };
+                    eventsData[selectedDateId][evt._index].text = newText;
+                    saveEvents();
                 }
-                saveEvents();
                 renderCalendars();
+                renderEventList();
             } else {
                 text.textContent = originalText;
             }
@@ -340,10 +653,18 @@ function renderEventList() {
                 menu.style.top = `${e.pageY}px`;
                 menu.classList.remove('hidden');
 
+                if (evt._isMulti) {
+                    document.getElementById('menu-set-period').textContent = '期間編集';
+                } else {
+                    document.getElementById('menu-set-period').textContent = '期間指定';
+                }
+                document.getElementById('menu-set-period').style.display = 'block';
+
                 activeContextMenuCallbacks = {
                     edit: () => {
                         if (text.contentEditable !== "true") {
                             text.contentEditable = "true";
+                            if (evt._isMulti) text.textContent = evt.text;
                             text.focus();
                             const range = document.createRange();
                             const sel = window.getSelection();
@@ -357,6 +678,18 @@ function renderEventList() {
                         templatesData.push({ text: evt.text, color: evt.color || '#667eea', textColor: evt.textColor || '#ffffff' });
                         saveTemplates();
                         renderQuickTemplates();
+                    },
+                    setPeriod: () => {
+                        if (evt._isMulti) {
+                            activeContextEvent = { event: evt, isExistingMulti: true };
+                            document.getElementById('period-start-date').value = evt.startDate;
+                            document.getElementById('period-end-date').value = evt.endDate;
+                        } else {
+                            activeContextEvent = { event: evt, index: evt._index, dateId: selectedDateId, isExistingMulti: false };
+                            document.getElementById('period-start-date').value = selectedDateId;
+                            document.getElementById('period-end-date').value = selectedDateId;
+                        }
+                        document.getElementById('period-modal').classList.remove('hidden');
                     }
                 };
             }
@@ -370,7 +703,14 @@ function renderEventList() {
         bgColorPicker.addEventListener('input', (e) => {
             evt.color = e.target.value;
             li.style.backgroundColor = evt.color;
-            saveEvents();
+            if (evt._isMulti) {
+                const realEvt = multiDayEventsData.find(m => m.id === evt.id);
+                if (realEvt) realEvt.color = evt.color;
+                saveMultiEvents();
+            } else {
+                eventsData[selectedDateId][evt._index].color = evt.color;
+                saveEvents();
+            }
             renderCalendars();
         });
 
@@ -382,7 +722,14 @@ function renderEventList() {
         textColorPicker.addEventListener('input', (e) => {
             evt.textColor = e.target.value;
             text.style.color = evt.textColor;
-            saveEvents();
+            if (evt._isMulti) {
+                const realEvt = multiDayEventsData.find(m => m.id === evt.id);
+                if (realEvt) realEvt.textColor = evt.textColor;
+                saveMultiEvents();
+            } else {
+                eventsData[selectedDateId][evt._index].textColor = evt.textColor;
+                saveEvents();
+            }
             renderCalendars();
         });
         
@@ -390,11 +737,16 @@ function renderEventList() {
         delBtn.className = 'delete-event-btn';
         delBtn.innerHTML = '&times;';
         delBtn.addEventListener('click', () => {
-            eventsData[selectedDateId].splice(index, 1);
-            if (eventsData[selectedDateId].length === 0) {
-                delete eventsData[selectedDateId];
+            if (evt._isMulti) {
+                multiDayEventsData = multiDayEventsData.filter(m => m.id !== evt.id);
+                saveMultiEvents();
+            } else {
+                eventsData[selectedDateId].splice(evt._index, 1);
+                if (eventsData[selectedDateId].length === 0) {
+                    delete eventsData[selectedDateId];
+                }
+                saveEvents();
             }
-            saveEvents();
             renderEventList();
             renderCalendars();
         });

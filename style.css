@@ -91,7 +91,7 @@ body {
 .calendar-wrapper {
     flex: 1;
     min-width: 320px;
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(235, 240, 245, 0.8); /* 少し暗くして日付セルとのコントラストを上げる */
     border-radius: var(--border-radius-sm);
     padding: 1.5rem;
 }
@@ -108,6 +108,7 @@ body {
     grid-template-columns: repeat(7, var(--cell-fixed-width));
     justify-content: center;
     gap: 8px;
+    --grid-gap: 8px;
 }
 
 .today-btn {
@@ -136,13 +137,11 @@ body {
     cursor: pointer;
     transition: var(--transition);
     position: relative;
-    border: 1px solid transparent;
-    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.08); /* 境界線を少し明確に */
 }
 
 .date-cell:hover:not(.empty) {
-    transform: scale(1.05);
-    z-index: 10;
+    background: rgba(255,255,255, 0.8);
     border-color: var(--primary-color);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
@@ -186,30 +185,45 @@ body {
 .event-indicator {
     display: flex;
     flex-direction: column;
-    gap: 2px;
     margin-top: 2px;
+    width: 100%;
+    overflow: visible;
+}
+
+.event-bar {
+    font-size: 0.65rem;
+    height: 18px;
+    margin-bottom: 2px;
+    background: var(--primary-color);
+    color: white;
+    line-height: 18px;
+    padding: 0 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+    display: block;
+}
+
+.event-bar.placeholder {
+    background: transparent !important;
+    color: transparent !important;
+    pointer-events: none;
+}
+
+.event-bar.single {
+    border-radius: 3px;
     width: 100%;
 }
 
-.event-dot {
-    font-size: 0.65rem;
-    background: var(--primary-color);
-    color: white;
-    border-radius: 3px;
-    padding: 2px 4px;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis; /* 固定幅に収まらない文字を省略（...） */
-    max-width: 100%;
-    box-sizing: border-box;
+/* 複数日バーはオーバーレイとして絶対配置されるため、セル内CSSは不要 */
+.multi-bar-overlay {
+    cursor: default;
 }
-
-.event-dot.checked {
+.event-bar.checked {
     opacity: 0.6;
 }
-
-.event-dot.checked::before {
+.event-bar.checked::before {
     content: "✓ ";
     font-weight: bold;
 }
@@ -345,6 +359,14 @@ body {
     border-radius: 4px;
 }
 
+.event-text[contenteditable="true"] {
+    color: #000000 !important;
+    background: white;
+    border-radius: 3px;
+    padding: 0 2px;
+    outline: 1px solid rgba(0,0,0,0.2);
+}
+
 .delete-event-btn {
     background: none;
     border: none;
@@ -412,6 +434,14 @@ body {
 }
 .edit-event-btn:hover {
     background: rgba(49, 130, 206, 0.1);
+}
+
+.multi-period-icon {
+    font-size: 0.85rem;
+    margin-right: 0.25rem;
+    cursor: default;
+    flex-shrink: 0;
+    opacity: 0.9;
 }
 
 .primary-btn {
