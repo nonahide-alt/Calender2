@@ -19,6 +19,15 @@ let calendarMetas = {};
 let activeContextMenuCallbacks = null;
 let activeContextEvent = null;
 let multiDayEventsData = JSON.parse(localStorage.getItem('calendarMultiEvents')) || [];
+let dateIconsData = JSON.parse(localStorage.getItem('calendarDateIcons')) || {};
+let monthlyNotesData = JSON.parse(localStorage.getItem('calendarMonthlyNotes')) || {};
+
+// データマイグレーション: 単一文字列を配列に変換
+for (const dateId in dateIconsData) {
+    if (typeof dateIconsData[dateId] === 'string') {
+        dateIconsData[dateId] = [dateIconsData[dateId]];
+    }
+}
 
 let isDarkMode = JSON.parse(localStorage.getItem('calendarDarkMode')) || false;
 if (isDarkMode) {
@@ -39,6 +48,14 @@ function saveTemplates() {
 
 function saveMultiEvents() {
     localStorage.setItem('calendarMultiEvents', JSON.stringify(multiDayEventsData));
+}
+
+function saveDateIcons() {
+    localStorage.setItem('calendarDateIcons', JSON.stringify(dateIconsData));
+}
+
+function saveMonthlyNotes() {
+    localStorage.setItem('calendarMonthlyNotes', JSON.stringify(monthlyNotesData));
 }
 
 function renderQuickTemplates() {
@@ -249,12 +266,46 @@ async function init() {
         });
     }
 
+    // アイコン選択のイベントリスナー (複数選択)
+    document.querySelectorAll('input[name="date-icon-check"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            if (selectedDateId) {
+                const selectedIcons = [];
+                document.querySelectorAll('input[name="date-icon-check"]:checked').forEach(cb => {
+                    selectedIcons.push(cb.value);
+                });
+                
+                if (selectedIcons.length > 0) {
+                    dateIconsData[selectedDateId] = selectedIcons;
+                } else {
+                    delete dateIconsData[selectedDateId];
+                }
+                saveDateIcons();
+                renderCalendars();
+            }
+        });
+    });
+
     renderCalendars();
 }
 
 function renderCalendars() {
     const leftDate = new Date(currentYear, currentMonth, 1);
     const rightDate = new Date(currentYear, currentMonth + 1, 1);
+
+    // ヘッダータイトルの更新 (西暦, 和暦, 月, 日, 曜日)
+    const today = new Date();
+    const options = { weekday: 'short' };
+    const dayStr = today.toLocaleDateString('ja-JP', options);
+    
+    // 和暦 (令和) の計算 (2019年が令和元年)
+    const reiwaYear = today.getFullYear() - 2018;
+    const reiwaStr = reiwaYear > 1 ? `令和${reiwaYear}年` : (reiwaYear === 1 ? '令和元年' : `平成${today.getFullYear() - 1988}年`);
+
+    const headerTitle = document.getElementById('header-title');
+    if (headerTitle) {
+        headerTitle.textContent = `${today.getFullYear()}年 (${reiwaStr}) ${today.getMonth() + 1}月 ${today.getDate()}日 (${dayStr})`;
+    }
 
     renderSingleCalendar('calendar-left', 'left-month-title', leftDate.getFullYear(), leftDate.getMonth());
     renderSingleCalendar('calendar-right', 'right-month-title', rightDate.getFullYear(), rightDate.getMonth());
@@ -380,10 +431,24 @@ function renderSingleCalendar(containerId, titleId, year, month) {
         const topRow = document.createElement('div');
         topRow.className = 'date-top-row';
 
+        const dateNumGroup = document.createElement('div');
+        dateNumGroup.className = 'date-num-group';
+
         const numSpan = document.createElement('span');
         numSpan.className = 'date-num';
         numSpan.textContent = i;
-        topRow.appendChild(numSpan);
+        dateNumGroup.appendChild(numSpan);
+
+        // 日付アイコンの表示 (複数)
+        const dateIcons = dateIconsData[dateId] || [];
+        dateIcons.forEach(icon => {
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'date-cell-icon';
+            iconSpan.textContent = icon;
+            iconSpan.style.fontSize = '1.1rem';
+            dateNumGroup.appendChild(iconSpan);
+        });
+        topRow.appendChild(dateNumGroup);
 
         const meta = calendarMetas[dateId];
         if (meta) {
@@ -431,11 +496,42 @@ function renderSingleCalendar(containerId, titleId, year, month) {
     requestAnimationFrame(() => {
         renderMultiDayOverlays(container, year, month, monthSlots, daysInMonth);
     });
+
+    // メモエリアの更新
+    renderMonthlyMemo(containerId, year, month);
+}
+
+function renderMonthlyMemo(calendarContainerId, year, month) {
+    const memoId = calendarContainerId === 'calendar-left' ? 'memo-left' : 'memo-right';
+    const container = document.getElementById(memoId);
+    if (!container) return;
+
+    const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+    container.innerHTML = '';
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'monthly-memo';
+    textarea.placeholder = `${month + 1}月のメモを入力...`;
+    textarea.value = monthlyNotesData[monthKey] || '';
+    
+    textarea.addEventListener('input', (e) => {
+        monthlyNotesData[monthKey] = e.target.value;
+        saveMonthlyNotes();
+    });
+
+    container.appendChild(textarea);
 }
 
 function openModal(dateId, day, month, year) {
     selectedDateId = dateId;
     document.getElementById('modal-date-title').textContent = `${year}年 ${month + 1}月 ${day}日の予定`;
+    
+    // アイコン選択状態を反映 (複数)
+    const currentIcons = dateIconsData[dateId] || [];
+    document.querySelectorAll('input[name="date-icon-check"]').forEach(cb => {
+        cb.checked = currentIcons.includes(cb.value);
+    });
+
     document.getElementById('event-modal').classList.remove('hidden');
     renderEventList();
     setTimeout(() => document.getElementById('new-event-input').focus(), 100);
@@ -535,6 +631,11 @@ function renderMultiDayOverlays(container, year, month, monthSlots, daysInMonth)
             bar.style.zIndex = '20';
             bar.style.boxSizing = 'border-box';
             bar.style.pointerEvents = 'none';
+            bar.style.border = '1px solid rgba(0, 0, 0, 0.15)'; // 枠線を追加
+            
+            if (isDarkMode) {
+                bar.style.borderColor = 'rgba(255, 255, 255, 0.2)'; // ダークモード用
+            }
             
             // 角丸の設定
             const rStart = isActualStart ? '3px' : '0';

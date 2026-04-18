@@ -144,8 +144,26 @@ body {
 }
 
 .date-cell.today {
-    background: #ebf4ff;
-    border: 1px solid var(--primary-color);
+    background: #ffffff;
+    border: 2px solid var(--primary-color);
+    box-shadow: inset 0 0 0 1px rgba(102, 126, 234, 0.1);
+}
+
+.date-cell.today .date-num {
+    background: var(--primary-color);
+    color: white !important;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin: -2px 0 0 -2px;
+}
+
+body.dark-mode .date-cell.today {
+    background: #2d3748;
+    border: 2px solid var(--primary-color);
 }
 
 .date-cell.sun { color: #e53e3e; }
@@ -159,8 +177,14 @@ body {
 .date-top-row {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center; /* Align items vertically */
     width: 100%;
+}
+
+.date-num-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .rokuyo {
@@ -206,6 +230,11 @@ body {
 .event-bar.single {
     border-radius: 3px;
     width: 100%;
+    border: 1px solid rgba(0, 0, 0, 0.15); /* 微かな暗い枠線 */
+}
+
+body.dark-mode .event-bar.single {
+    border: 1px solid rgba(255, 255, 255, 0.2); /* ダークモード用の明るい枠線 */
 }
 
 /* 複数日バーはオーバーレイとして絶対配置されるため、セル内CSSは不要 */
@@ -275,11 +304,25 @@ body {
     font-size: 1.5rem;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: color 0.2s;
+    transition: all 0.2s ease;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .close-btn:hover {
     color: #e53e3e;
+}
+
+body.dark-mode .close-btn {
+    background: none;
+    border: none;
+    color: #a0aec0;
+}
+
+body.dark-mode .close-btn:hover {
+    color: #fca5a5; /* ダークモード用ホバー色 */
 }
 
 .event-list {
@@ -360,12 +403,26 @@ body {
 }
 
 .delete-event-btn {
-    background: none;
-    border: none;
-    color: #e53e3e;
+    background: #e53e3e; /* 最初から赤背景に */
+    border: 1px solid #c53030;
+    color: white; /* 文字は白に */
     cursor: pointer;
-    font-size: 0.9rem;
-    margin-left: 0.25rem;
+    font-size: 1.1rem;
+    margin-left: 0.5rem;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.delete-event-btn:hover {
+    background: #c53030;
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .input-group-vertical {
@@ -434,6 +491,20 @@ body {
     cursor: default;
     flex-shrink: 0;
     opacity: 0.9;
+}
+
+.date-icon-selection {
+    margin-bottom: 1.5rem;
+    padding: 0.75rem;
+    background: #f7fafc;
+    border-radius: 8px;
+}
+
+.date-icon-selection h4 {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    font-weight: 600;
 }
 
 .primary-btn {
@@ -622,6 +693,55 @@ body.dark-mode .close-btn {
 }
 body.dark-mode .close-btn:hover {
     color: #f32013;
+}
+
+body.dark-mode .date-icon-selection {
+    background: #2d3748;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+body.dark-mode .date-icon-selection h4 {
+    color: #a0aec0;
+}
+
+.memo-container {
+    margin-top: 1rem;
+    padding: 0 0.5rem;
+}
+
+.monthly-memo {
+    width: 100%;
+    height: 120px;
+    padding: 0.75rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    resize: none;
+    background: #ffffff;
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.monthly-memo:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.monthly-memo::placeholder {
+    color: #a0aec0;
+}
+
+body.dark-mode .monthly-memo {
+    background: #1a202c;
+    border-color: #2d3748;
+    color: #e2e8f0;
+}
+
+body.dark-mode .monthly-memo:focus {
+    border-color: var(--primary-color);
 }
 
 @media (max-width: 768px) {

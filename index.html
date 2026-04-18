@@ -12,6 +12,7 @@
         <header class="app-header">
             <button id="btn-prev" class="nav-btn">&larr; 前の月</button>
             <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <h1 id="header-title" style="font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></h1>
                 <button id="btn-today" class="nav-btn today-btn">今日</button>
                 <button id="btn-manage-templates" class="nav-btn">登録リスト編集</button>
             </div>
@@ -30,10 +31,12 @@
             <div class="calendar-wrapper">
                 <h2 id="left-month-title" class="month-title">Month 1</h2>
                 <div class="calendar" id="calendar-left"></div>
+                <div id="memo-left" class="memo-container"></div>
             </div>
             <div class="calendar-wrapper">
                 <h2 id="right-month-title" class="month-title">Month 2</h2>
                 <div class="calendar" id="calendar-right"></div>
+                <div id="memo-right" class="memo-container"></div>
             </div>
         </main>
     </div>
@@ -47,7 +50,47 @@
             </div>
             <div class="modal-body">
                 <ul id="event-list" class="event-list"></ul>
-                <div class="input-group-vertical">
+                    <div class="date-icon-selection">
+                        <h4>日付アイコン設定</h4>
+                        <div style="display: flex; gap: 0.75rem; justify-content: space-around;">
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="🏃">
+                                <span style="font-size: 1.2rem;">🏃</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="💧">
+                                <span style="font-size: 1.2rem;">💧</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="🦴">
+                                <span style="font-size: 1.2rem;">🦴</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="💨">
+                                <span style="font-size: 1.2rem;">💨</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="🎂">
+                                <span style="font-size: 1.2rem;">🎂</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="📖">
+                                <span style="font-size: 1.2rem;">📖</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="🔨">
+                                <span style="font-size: 1.2rem;">🔨</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="🇺🇸">
+                                <span style="font-size: 1.2rem;">🇺🇸</span>
+                            </label>
+                            <label style="cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" name="date-icon-check" value="🏢">
+                                <span style="font-size: 1.2rem;">🏢</span>
+                            </label>
+                        </div>
+                    </div>
 
                     <div class="input-row">
                         <input type="color" id="new-event-color" value="#667eea" class="color-picker" title="背景色を選択">
