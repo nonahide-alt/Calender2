@@ -15,6 +15,11 @@
                 <h1 id="header-title" style="font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;"></h1>
                 <button id="btn-today" class="nav-btn today-btn">今日</button>
                 <button id="btn-manage-templates" class="nav-btn">登録リスト編集</button>
+                <div style="display: flex; gap: 0.5rem; margin-left: 0.5rem; padding-left: 0.5rem; border-left: 1px solid #e2e8f0;">
+                    <button id="btn-export" class="nav-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" title="データを保存">出力</button>
+                    <button id="btn-import" class="nav-btn" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" title="データを復元">入力</button>
+                    <input type="file" id="import-file" style="display: none;" accept=".json">
+                </div>
             </div>
             <div style="display: flex; gap: 1rem; align-items: center;">
                 <button id="btn-next" class="nav-btn">次の月 &rarr;</button>

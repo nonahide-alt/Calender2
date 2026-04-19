@@ -286,7 +286,70 @@ async function init() {
         });
     });
 
+    // エクスポート/インポートのイベントリスナー
+    const btnExport = document.getElementById('btn-export');
+    if (btnExport) {
+        btnExport.addEventListener('click', exportEvents);
+    }
+
+    const btnImport = document.getElementById('btn-import');
+    const importFile = document.getElementById('import-file');
+    if (btnImport && importFile) {
+        btnImport.addEventListener('click', () => importFile.click());
+        importFile.addEventListener('change', importEvents);
+    }
+
     renderCalendars();
+}
+
+function exportEvents() {
+    const data = {
+        calendarEvents: eventsData,
+        calendarTemplates: templatesData,
+        calendarMultiEvents: multiDayEventsData,
+        calendarDateIcons: dateIconsData,
+        calendarMonthlyNotes: monthlyNotesData,
+        calendarDarkMode: isDarkMode
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    a.href = url;
+    a.download = `calendar-backup-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function importEvents(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            const data = JSON.parse(event.target.result);
+            if (confirm('データを復元しますか？現在のデータは上書きされます。')) {
+                if (data.calendarEvents) localStorage.setItem('calendarEvents', JSON.stringify(data.calendarEvents));
+                if (data.calendarTemplates) localStorage.setItem('calendarTemplates', JSON.stringify(data.calendarTemplates));
+                if (data.calendarMultiEvents) localStorage.setItem('calendarMultiEvents', JSON.stringify(data.calendarMultiEvents));
+                if (data.calendarDateIcons) localStorage.setItem('calendarDateIcons', JSON.stringify(data.calendarDateIcons));
+                if (data.calendarMonthlyNotes) localStorage.setItem('calendarMonthlyNotes', JSON.stringify(data.calendarMonthlyNotes));
+                if (data.calendarDarkMode !== undefined) localStorage.setItem('calendarDarkMode', JSON.stringify(data.calendarDarkMode));
+                
+                alert('データを復元しました。再読み込みします。');
+                location.reload();
+            }
+        } catch (err) {
+            alert('ファイルの読み込みに失敗しました。正しい形式のJSONファイルを選択してください。');
+        }
+    };
+    reader.readAsText(file);
+    // 同じファイルを再度選択できるようにリセット
+    e.target.value = '';
 }
 
 function renderCalendars() {
