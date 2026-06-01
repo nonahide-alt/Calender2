@@ -402,6 +402,7 @@ function allocateSlots(year, month) {
         while (!slotFound) {
             let conflict = false;
             let d = new Date(evt.startDate);
+            d.setHours(0,0,0,0);
             const endD = new Date(evt.endDate);
             endD.setHours(0,0,0,0);
             while (d <= endD) {
@@ -416,6 +417,7 @@ function allocateSlots(year, month) {
             else slotIndex++;
         }
         let d = new Date(evt.startDate);
+        d.setHours(0,0,0,0);
         const endD = new Date(evt.endDate);
         endD.setHours(0,0,0,0);
         while (d <= endD) {
@@ -450,7 +452,44 @@ function renderSingleCalendar(containerId, titleId, year, month) {
     const container = document.getElementById(containerId);
     const title = document.getElementById(titleId);
     container.innerHTML = '';
-    title.textContent = `${year}年 ${month + 1}月`;
+    
+    // アイコンの集計
+    const counts = {};
+    try {
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dateId = `${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+            if (dateIconsData && dateIconsData[dateId]) {
+                let icons = dateIconsData[dateId];
+                if (typeof icons === 'string') icons = [icons];
+                if (Array.isArray(icons)) {
+                    icons.forEach(icon => {
+                        if (icon) counts[icon] = (counts[icon] || 0) + 1;
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Icon counting error:", e);
+    }
+
+    // タイトルと統計の描画
+    title.innerHTML = `<span>${year}年 ${month + 1}月</span>`;
+    const iconKeys = Object.keys(counts);
+    if (iconKeys.length > 0) {
+        const statsWrap = document.createElement('div');
+        statsWrap.className = 'month-stats';
+        
+        iconKeys
+            .sort((a, b) => counts[b] - counts[a])
+            .forEach(icon => {
+                const badge = document.createElement('div');
+                badge.className = 'stat-badge';
+                badge.innerHTML = `<span>${icon}</span> <span>${counts[icon]}回</span>`;
+                statsWrap.appendChild(badge);
+            });
+        title.appendChild(statsWrap);
+    }
 
     const monthSlots = allocateSlots(year, month);
 
@@ -725,9 +764,10 @@ function renderEventList() {
     const singleEvents = (eventsData[selectedDateId] || []).map((e, idx) => Object.assign({}, e, { _isMulti: false, _index: idx }));
     const multiEvents = multiDayEventsData.filter(e => {
         const d = new Date(selectedDateId);
+        d.setHours(0,0,0,0);
         const sd = new Date(e.startDate);
-        const ed = new Date(e.endDate);
         sd.setHours(0,0,0,0);
+        const ed = new Date(e.endDate);
         ed.setHours(0,0,0,0);
         return d >= sd && d <= ed;
     }).map((e, idx) => Object.assign({}, e, { _isMulti: true, _index: idx }));
